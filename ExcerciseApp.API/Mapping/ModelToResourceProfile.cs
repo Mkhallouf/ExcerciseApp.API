@@ -1,8 +1,7 @@
 ﻿using AutoMapper;
 using ExcerciseApp.API.Domain.Models;
-using ExcerciseApp.API.Resources;
+using ExcerciseApp.API.Domain.Models.Requests;
 using ExcerciseApp.API.Resources.Requests;
-using ExcerciseApp.API.Resources.Responces;
 
 namespace ExcerciseApp.API.Mapping
 {
@@ -12,7 +11,7 @@ namespace ExcerciseApp.API.Mapping
         {
             CreateMap<Workout, WorkoutResource>();
             CreateMap<WorkoutResource, Workout>();
-            CreateMap<CreateWorkoutResource, Workout>();
+            CreateMap<CreateWorkoutRequest, Workout>();
         }
     }
 }
