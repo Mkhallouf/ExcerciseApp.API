@@ -20,7 +20,7 @@ namespace ExcerciseApp.API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IAuthService _authService;
 
-        public AccountController(UserManager<User> userManager, ILogger<AccountController> logger, IMapper mapper, IAuthService authService, )
+        public AccountController(UserManager<User> userManager, ILogger<AccountController> logger, IMapper mapper, IAuthService authService)
         {
             _userManager = userManager;
             _authService = authService;
@@ -63,7 +63,7 @@ namespace ExcerciseApp.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Something went wrong in the {nameof(RegisterAsync)}");
-                return Problem($"Something went wrong in the {nameof(RegisterAsync)}", statusCode: 500);
+                return new BadRequestResult();
             }
         }
 
@@ -90,8 +90,8 @@ namespace ExcerciseApp.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Something went wrong in the {nameof(Login)}");
-                return Problem($"Something went wrong in the {nameof(LoginAsync)}", statusCode: 500);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(LoginAsync)}");
+                return new BadRequestResult();
             }
         }
     }
