@@ -1,7 +1,9 @@
-﻿using ExcerciseApp.API.Communication.Responces;
-using ExcerciseApp.API.Domain.Models;
-using ExcerciseApp.API.Domain.Repositories;
-using ExcerciseApp.API.Resources;
+﻿using AutoMapper;
+using ExcerciseApp.API.IRepositories;
+using ExcerciseApp.API.Models;
+using ExcerciseApp.API.Models.Requests.Workout;
+using ExcerciseApp.API.Models.Responses;
+using ExcerciseApp.API.Models.Responses.Workout;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,33 +12,40 @@ namespace ExcerciseApp.API.Services
 {
     public class WorkoutService : IWorkoutService
     {
-        private readonly IWorkoutRepository _workoutRepository;
+        private readonly IGenericRepository<Workout> _workoutRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public WorkoutService(IWorkoutRepository workoutRepository, IUnitOfWork unitOfWork)
+        public WorkoutService(IGenericRepository<Workout> workoutRepository, IUnitOfWork unitOfWork)
         {
             _workoutRepository = workoutRepository;
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<WorkoutResponse> CreateAsync(Workout workout)
+        public async Task<APIResponse<CreateWorkoutResponse>> CreateAsync(Workout workout)
         {
             try
             {
-                await _workoutRepository.CreateAsync(workout);
+                await _workoutRepository.InsertAsync(workout);
                 await _unitOfWork.CompleteAsync();
 
-                return new WorkoutResponse(workout);
+                return new APIResponse<CreateWorkoutResponse>
+                {
+                    Result = new CreateWorkoutResponse
+                    {
+                        Id = workout.WorkoutId,
+                    }
+                };
             }
             catch (Exception ex)
             {
-                return new WorkoutResponse($"Something happen when saving workout: {ex.Message}");
+                throw new Exception($"Something happen when saving workout: {ex.Message}");
             }
         }
 
-        public async Task<WorkoutResponse> DeleteAsync(int id)
+        public async Task<APIResponse<EmptyResponse>> DeleteAsync(int id)
         {
-            var existingWorkout = await _workoutRepository.FindByIdAsync(id);
+            var existingWorkout = await _workoutRepository.Get((entity) => entity.WorkoutId == id);
+
             if (existingWorkout == null)
             {
                 throw new Exception("Workout not found");
@@ -44,61 +53,86 @@ namespace ExcerciseApp.API.Services
 
             try
             {
-                _workoutRepository.Delete(existingWorkout);
+                await _workoutRepository.DeleteAsync(id);
                 await _unitOfWork.CompleteAsync();
 
-                return new WorkoutResponse(existingWorkout);
+                return new APIResponse<EmptyResponse>();
             }
             catch (Exception ex)
             {
-                return new WorkoutResponse($"Something happen when deleting workout: {ex.Message}");
-
+                throw new Exception($"Something happen when deleting workout: {ex.Message}");
             }
         }
 
-        public async Task<IEnumerable<Workout>> ListAsync()
+        public async Task<APIResponse<IEnumerable<Workout>>> ListAsync()
         {
-            return await _workoutRepository.ListAsync();
+
+            try
+            {
+                var workouts = await _workoutRepository.GetAllAsync();
+
+                return new APIResponse<IEnumerable<Workout>>
+                {
+                    Result = workouts
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Something happen when fetching all workouts: {ex.Message}");
+            }
         }
 
-        public async Task<WorkoutResponse> RetrieveAsync(int id)
+        public async Task<APIResponse<RetrieveWorkoutResponse>> RetrieveAsync(int id)
         {
             try
             {
-                var existingWorkout = await _workoutRepository.FindByIdAsync(id);
+                var existingWorkout = await _workoutRepository.Get((entity) => entity.WorkoutId == id);
                 if (existingWorkout == null)
                 {
                     throw new Exception("Workout not found");
                 }
 
-                return new WorkoutResponse(existingWorkout);
+                return new APIResponse<RetrieveWorkoutResponse>
+                {
+                    Result = new RetrieveWorkoutResponse
+                    {
+                        Workout = existingWorkout,
+                    }
+                };
             }
             catch (Exception ex)
             {
-                return new WorkoutResponse($"Can't retrieve the workout: {ex.Message}");
+                throw new Exception($"Something happen when retrieving a workout: {ex.Message}");
             }
         }
 
-        public async Task<WorkoutResponse> UpdateAsync(int id, Workout workout)
+        public async Task<APIResponse<UpdateWorkoutResponse>> UpdateAsync(int id, Workout workout)
         {
-            var existingWorkout = await _workoutRepository.FindByIdAsync(id);
-
-            if (existingWorkout == null)
-            {
-                throw new Exception("Workout not found");
-            }
-
             try
             {
+                var existingWorkout = await _workoutRepository.Get((entity) => entity.WorkoutId == id);
+
+                if (existingWorkout == null)
+                {
+                    throw new Exception("Workout not found");
+                }
+
                 _workoutRepository.Update(workout);
                 await _unitOfWork.CompleteAsync();
 
-                return new WorkoutResponse(existingWorkout);
+                return new APIResponse<UpdateWorkoutResponse>
+                {
+                    Result = new UpdateWorkoutResponse
+                    {
+                        
+                    }
+                };
             }
             catch (Exception ex)
             {
-                return new WorkoutResponse($"Can't update the workout: {ex.Message}");
+                throw new Exception($"Something happen when updating a workout: {ex.Message}");
             }
         }
     }
 }
+

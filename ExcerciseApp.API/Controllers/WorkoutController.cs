@@ -1,14 +1,12 @@
 ﻿using AutoMapper;
-using ExcerciseApp.API.Domain.Models;
-using ExcerciseApp.API.Domain.Models.Requests;
 using ExcerciseApp.API.Extensions;
-using ExcerciseApp.API.Resources;
-using ExcerciseApp.API.Resources.Requests;
+using ExcerciseApp.API.Models;
+using ExcerciseApp.API.Models.Requests.Workout;
 using ExcerciseApp.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace ExcerciseApp.API.Controllers
@@ -19,11 +17,13 @@ namespace ExcerciseApp.API.Controllers
     {
         private readonly IWorkoutService _workoutService;
         private readonly IMapper _mapper;
+        private readonly ILogger<WorkoutController> _logger;
 
-        public WorkoutController(IWorkoutService workoutService, IMapper mapper)
+        public WorkoutController(IWorkoutService workoutService, IMapper mapper, ILogger<WorkoutController> logger)
         {
             _workoutService = workoutService;
             _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet("{id}")]
@@ -31,10 +31,9 @@ namespace ExcerciseApp.API.Controllers
         {
             try
             {
-                var result = await _workoutService.RetrieveAsync(id);
-                var response = _mapper.Map<Workout, WorkoutResource>(result.Workout);
+                var response = await _workoutService.RetrieveAsync(id);
 
-                return new OkObjectResult(response);
+                return new OkObjectResult(response.Result);
             }
             catch (Exception ex)
             {
@@ -44,18 +43,26 @@ namespace ExcerciseApp.API.Controllers
                 }
                 else
                 {
+                    _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetAsync)}");
                     return new BadRequestObjectResult(ex.Message);
                 }
             }
         }
 
         [HttpGet]
-        public async Task<IEnumerable<WorkoutResource>> GetAllAsync()
+        public async Task<IEnumerable<Workout>> GetAllAsync()
         {
-            var workouts = await _workoutService.ListAsync();
-            var response = _mapper.Map<IEnumerable<Workout>, IEnumerable<WorkoutResource>>(workouts);
+            try
+            {
+                var response = await _workoutService.ListAsync();
+             return response.Result;
 
-            return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetAllAsync)}");
+                throw;
+            }
         }
 
         [HttpPost]
@@ -66,11 +73,18 @@ namespace ExcerciseApp.API.Controllers
                 return new BadRequestObjectResult(ModelState.GetErrorMessages());
             }
 
-            var workout = _mapper.Map<CreateWorkoutRequest, Workout>(request);
+            try
+            {
+                var workout = _mapper.Map<Workout>(request);
+                await _workoutService.CreateAsync(workout);
 
-            await _workoutService.CreateAsync(workout);
-
-            return Ok();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something Went Wrong in the {nameof(PostAsync)}");
+                return new BadRequestResult();
+            }
         }
 
         [HttpPut("{id}")]
@@ -83,7 +97,7 @@ namespace ExcerciseApp.API.Controllers
 
             try
             {
-                var workout = _mapper.Map<UpdateWorkoutRequest, Workout>(request);
+                var workout = _mapper.Map<Workout>(request);
                 await _workoutService.UpdateAsync(id, workout);
 
                 return new OkResult();
@@ -96,6 +110,7 @@ namespace ExcerciseApp.API.Controllers
                 }
                 else
                 {
+                    _logger.LogError(ex, $"Something Went Wrong in the {nameof(PutAsync)}");
                     return new BadRequestObjectResult(ex.Message);
                 }
             }
@@ -106,7 +121,7 @@ namespace ExcerciseApp.API.Controllers
         {
             try
             {
-                await _workoutService.DeleteAsync(id);
+                _ = await _workoutService.DeleteAsync(id);
 
                 return new OkResult();
             }
@@ -118,6 +133,7 @@ namespace ExcerciseApp.API.Controllers
                 }
                 else
                 {
+                    _logger.LogError(ex, $"Something Went Wrong in the {nameof(DeleteAsync)}");
                     return new BadRequestObjectResult(ex.Message);
                 }
             }
